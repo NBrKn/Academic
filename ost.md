@@ -34,6 +34,13 @@
         - [**Processes**](#processes)
         - [Overview](#overview)
         - [Relevant commands](#relevant-commands)
+            - [ps](#ps)
+            - [pstree](#pstree)
+            - [top](#top)
+            - [kill](#kill)
+            - [killall](#killall)
+            - [nice](#nice)
+            - [free](#free)
         - [Process Creation / fork-exec-wait-exit](#process-creation-fork-exec-wait-exit)
         - [init ?](#init)
         - [daemon processes](#daemon-processes)
@@ -42,7 +49,12 @@
         - [child processes](#child-processes)
         - [background process](#background-process)
         - [foreground process](#foreground-process)
-    - [Backup commands](#backup-commands)
+        - [Backup](#backup)
+        - [Backup commands](#backup-commands)
+            - [tar](#tar)
+            - [cpio](#cpio)
+            - [dump and restore](#dump-and-restore)
+            - [Other](#other)
     - [Networking and Security](#networking-and-security)
         - [Networking commands](#networking-commands)
             - [netstat (snetstat?)](#netstat-snetstat)
@@ -55,7 +67,7 @@
             - [route](#route)
         - [Apache RPM installation](#apache-rpm-installation)
         - [Iptables](#iptables)
-        - [http.conf](#httpconf)
+        - [httpd.conf](#httpdconf)
             - [Keepalive](#keepalive)
             - [Keepalive Timeout](#keepalive-timeout)
             - [MaxClients](#maxclients)
@@ -428,6 +440,7 @@ $ ls -l sharedFile
 ```
 
 Symbolic modes
+
 | Reference | Class  | Description                                                            |
 | --------- | ------ | ---------------------------------------------------------------------- |
 | u         | owner  | file's owner                                                           |
@@ -511,6 +524,55 @@ Notes page 6 onwarrds
 	* Signal disposition table
 
 ### Relevant commands
+    
+#### ps
+
+Reports a snapshot of the status of currently running processes.
+
+    ps [options]
+
+-A all processes  
+-g, -u
+
+#### pstree
+
+pstree displays processes in tree format.
+
+-p pid  
+-u uid
+
+#### top
+
+The top program provides a dynamic real-time view of a running system. It can display system summary information, as well as a list of processes or threads currently being managed by the kernel. The types of system summary information shown and the types, order and size of information displayed for tasks are all user-configurable.
+
+    top
+
+#### kill
+
+kill is used to send a signal to a process.    
+
+    kill [-s] [-l] %pid
+
+#### killall
+
+killall kills processes by name.
+
+killall sends a signal to all processes running any of the specified commands. If no signal name is specified, SIGTERM is sent.
+
+#### nice
+
+Runs a command with a modified scheduling priority.
+
+-20 to 19
+
+    nice [OPTION] [COMMAND [ARG]...]
+
+
+#### free
+
+Displays the total amount of free and used physical and swap memory in the system, as well as the buffers used by the kernel.
+
+    free [options]
 
 ### Process Creation / fork-exec-wait-exit
 
@@ -542,17 +604,105 @@ processes created by a user
 
 ### parent process
 
+A process which creates another process is called a parent process  
+Each process has 2 IDs: PID, PPID
 
+For ppid:
+
+    ps -f
 
 ### child processes
 
+A process that has been created by another process called the parent process
+
+    pstree
+
 ### background process
+
+Larger, longer time period
+Run simulatneously with other bg and fg processes 
+Background jobs are run at a lower priority to the foreground jobs.
+
+To launch
+    $ command1 &
+
 
 ### foreground process
 
+Generally of smaller duration and require heavy user interaction  
+Generally only 2 foreground processes are running in memory
 
-## Backup commands
+Ctrl-Z to suspend  
+To resume a suspended process in the foreground, type fg and that process will take over the active session.
+
+### Backup
+
+* Full
+* Incremental: only for file change 
+* Network: on new server
+* Dump: entire filesystem
+
+### Backup commands
+
+#### tar
+
+* Used for single or multiple file backup
+* Only works on mounted filesystem
+* Cannot backup special characters and block files
+
+Backing up all files in a directory including subdirectories to a  tape device (/dev/rmt/0),
+
+    tar cvf /dev/rmt/0 *
+
+Viewing a tar backup on a tape
+    
+    tar tvf /dev/rmt/0
+
+Extracting tar backup from the tape
+    
+    tar xvf /dev/rmt/0
+
+-c create  
+-x extract  
+-t list contents    
+-f file
+
+#### cpio
+
+1. Used for single or multiple files backup .
+2. Can backup special character & block device files .
+3. Works only on mounted file system.
+4. Need a list of files to be backed up .
+5. Preserve hard links and time stamps of the files .
+
+Using cpio command to back up all the files in current directory to tape.
+
+    find . -depth -print | cpio -ovc > /dev/rmt/0
+
+cpio expects a list of files and find command provides the list, cpio has to put these file on some destination and a > sign redirect these files to tape. This can be a file as well .
+
+Viewing cpio files on a tape
+
+    cpio -ivt < /dev/rmt/0
+
+Restoring a cpio backup
+
+    cpio -ivc < /dev/rmt/0
+
+-o create  
+-i extract  
+-t list contents
+
+#### dump and restore
+
+utility which can take full system backups
+
+    dump level options destination source
+    restore options filename
 ---
+#### Other
+
+gzip, bip2, zipinfo
 
 ## Networking and Security
 
@@ -658,19 +808,65 @@ In computer networking, a router is a device responsible for forwarding network 
 
 ### Iptables
 
-Pdf
+* Mangle: Mangling packets, change TOS
+* NAT: translate 
+* RAW: set mark that they should not be handled by connection tracking system
+* Filter: default table for handling, Filtering, drop accept
+* Security: Configure mandatory access control rules that have to be followed by the host machine
 
-### http.conf
+* INPUT: network packets targeted for host
+* OUTPUT: locally generated packets before they are sent out
+* FORWARD: applies to packet routed thorugh host
+* PREROUTING: before routing
+* POSTROUTING: before being sent out
+
+![FLowchart](http://www.iptables.info/files/tables_traverse.jpg)
+
+    service iptables {start, stop, restart, save}
+
+Status of firewall:
+
+    iptables -L [OUTPUT] -n -v --line-numbers
+
+L: displays rules  
+n displays IP  
+v verbose
+
+Delete INPUT rule at line 4
+
+    iptables -D INPUT 4
+
+-t table
+-j jump to chain  
+-I insert
+-A append
+-s source  
+-d dest  
+-i input interface name
+
+### httpd.conf
 
 #### Keepalive
 
+KeepAlive sets whether the server allows more than one request per connection and can be used to prevent any one client from consuming too much of the server's resources.K
+
+By default Keepalive is set to off. If Keepalive is set to on and the server becomes very busy, the server can quickly spawn the maximum number of child processes. In this situation, the server slows down significantly.
+
 #### Keepalive Timeout
+
+KeepAliveTimeout sets the number of seconds the server waits after a request has been served before it closes the connection. Once the server receives a request, the Timeout directive applies instead. The KeepAliveTimeout directive is set to 15 seconds by default.
 
 #### MaxClients
 
+MaxClients sets a limit on the total number of server processes, or simultaneously connected clients, that can run at one time. The main purpose of this directive is to keep a runaway Apache HTTP Server from crashing the operating system. For busy servers this value should be set to a high value. The server's default is set to 150 regardless of the MPM in use. However, it is not recommended that the value for MaxClients exceeds 256 when using the prefork MPM.
+
 #### ServerLimit
 
+
+
 #### StartServers
+
+The StartServers directive sets how many server processes are created upon startup. Since the Web server dynamically kills and creates server processes based on traffic load, it is not necessary to change this parameter. The Web server is set to start 8 server processes at startup for the prefork MPM and 2 for the worker MPM.
 
 ### DNS
 
@@ -696,13 +892,34 @@ delete text: d
 
 ### Environment Variables
 
+* printenv command – Print all or part of environment.
+* env command – Print all exported environment or run a program in a modified environment.
+* set command – Print the name and value of each shell variable.
+
+HOSTNAME
+BASH_VERSION
+SHELL bin/bash
+TERM
+EDITOR
+HOME
+HISTFILE
+HISTFILESIZE
+HISTSIZE
+
+
 ### pipes and redirects
 
 ### clearscreen
 
+clear && printf 'e[3]'or tput reset
+
 ### pwd
 
+pwd
+
 ### name of logged  in users
+
+who 
 
 ### sed
 
@@ -726,9 +943,25 @@ delete text: d
 
 ### Major Components
 
+* Applications
+* Application framework
+* Android Libraries - ART
+* Linux Kernel
+* HW
+
+
 ### Limux Kernel
 
 ### Native Android Libraries
+
+* Webkit
+* SQlite
+* OpenGL
+* Media Framework
+* Font management 
+* SSL
+* Surface manager
+
 
 ### AmdroidManifest.xml
 
